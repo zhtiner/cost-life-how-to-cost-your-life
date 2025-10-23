@@ -1,0 +1,192 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
+  <title>光合记账 · H5</title>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- Styles -->
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部区域：标题 + 预警横幅 -->
+    <header class="app-header">
+      <div class="header-title">
+        <i class="ri-sun-cloudy-line"></i>
+        <span>光合记账</span>
+      </div>
+      <div id="alertBanner" class="alert-banner hidden">
+        <i class="ri-alert-line"></i>
+        <div class="alert-text">
+          <strong>消费趋势预警</strong>
+          <span id="alertDetail">最近3天支出偏高，请酌情控制。</span>
+        </div>
+        <button id="closeAlert" aria-label="关闭预警"><i class="ri-close-line"></i></button>
+      </div>
+    </header>
+
+    <!-- 视图容器 -->
+    <main class="view-container">
+      <!-- 首页：预算进度 + 筛选 + 记录/相册 -->
+      <section id="view-home" class="view active">
+        <div class="home-top">
+          <div class="month-summary card fade-in">
+            <div class="summary-text">
+              <div class="summary-line"><span>本月总支出</span><strong id="summaryTotal">¥0</strong></div>
+              <div class="summary-line small"><span>最大开销</span><strong id="summaryMax">-</strong></div>
+              <div class="summary-line small"><span>心情摘要</span><strong id="summaryMood">-</strong></div>
+            </div>
+            <div class="summary-chart">
+              <canvas id="summaryMiniChart" height="80"></canvas>
+            </div>
+          </div>
+
+          <div class="budget-block card fade-in">
+            <div class="block-header">
+              <div class="title"><i class="ri-pie-chart-2-line"></i> 分类预算（月度）</div>
+              <button class="link-btn" data-nav="settings">设置预算</button>
+            </div>
+            <div id="budgetProgressList" class="progress-list"></div>
+          </div>
+
+          <div class="home-toolbar fade-in">
+            <div class="select-row">
+              <select id="filterCategory">
+                <option value="all">全部分类</option>
+              </select>
+              <select id="feedMode">
+                <option value="feed">动态流</option>
+                <option value="album">相册</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="feedContainer" class="feed-list"></div>
+        <div id="albumContainer" class="album-grid hidden"></div>
+      </section>
+
+      <!-- 记录：快速记账表单 -->
+      <section id="view-record" class="view">
+        <form id="recordForm" class="card form-card">
+          <div class="form-title"><i class="ri-edit-2-line"></i> 快速记一笔</div>
+
+          <label class="form-field">
+            <span>金额（¥）</span>
+            <input type="number" id="amountInput" inputmode="decimal" placeholder="0.00" required min="0.01" step="0.01" />
+          </label>
+
+          <label class="form-field">
+            <span>分类</span>
+            <div class="chips" id="categoryChips"></div>
+            <select id="categorySelect" class="hidden" aria-hidden="true"></select>
+          </label>
+
+          <label class="form-field">
+            <span>心情标签</span>
+            <div class="chips mood" id="moodChips"></div>
+            <select id="moodSelect" class="hidden" aria-hidden="true"></select>
+          </label>
+
+          <label class="form-field">
+            <span>备注（可自然语言）</span>
+            <textarea id="noteInput" rows="3" placeholder="例如：和朋友聚餐，很开心，烤肉超治愈～"></textarea>
+          </label>
+
+          <label class="form-field">
+            <span>上传图片</span>
+            <div class="upload-row">
+              <input type="file" id="imageInput" accept="image/*" />
+              <div id="imagePreview" class="image-preview hidden">
+                <img id="previewImg" alt="预览" />
+                <button type="button" id="removePreview" class="circle-btn" aria-label="移除图片"><i class="ri-close-line"></i></button>
+              </div>
+            </div>
+          </label>
+
+          <button type="submit" class="primary-btn"><i class="ri-add-circle-line"></i> 保存记录</button>
+        </form>
+
+        <div class="tips card">
+          <div><i class="ri-magic-line"></i> 填写备注时可自然语言描述，我们会提取情绪关键词用于分析。</div>
+        </div>
+      </section>
+
+      <!-- 统计：分类占比 + 趋势图 + 心情分析 -->
+      <section id="view-stats" class="view">
+        <div class="card">
+          <div class="block-header">
+            <div class="title"><i class="ri-donut-chart-line"></i> 分类支出占比</div>
+            <div class="select-row">
+              <select id="rangeSelect">
+                <option value="7">近7天</option>
+                <option value="30" selected>近30天</option>
+                <option value="90">近90天</option>
+              </select>
+            </div>
+          </div>
+          <canvas id="pieChart" height="220"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="block-header">
+            <div class="title"><i class="ri-line-chart-line"></i> 支出趋势</div>
+            <div class="tabs small" id="trendTabs">
+              <button data-range="7" class="active">7天</button>
+              <button data-range="30">30天</button>
+            </div>
+          </div>
+          <canvas id="lineChart" height="220"></canvas>
+          <div id="trendHint" class="hint small"></div>
+        </div>
+
+        <div class="card">
+          <div class="block-header">
+            <div class="title"><i class="ri-emotion-laugh-line"></i> 消费心情分析</div>
+          </div>
+          <div class="mood-stats">
+            <div class="mood-item"><span>开心占比</span><strong id="moodHappyPct">-</strong></div>
+            <div class="mood-item"><span>常见关键词</span><strong id="moodKeywords">-</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 设置：分类预算 -->
+      <section id="view-settings" class="view">
+        <div class="card">
+          <div class="block-header">
+            <div class="title"><i class="ri-settings-3-line"></i> 月度预算设置</div>
+            <button id="resetData" class="danger-btn ghost"><i class="ri-refresh-line"></i> 恢复示例数据</button>
+          </div>
+          <form id="budgetForm" class="budget-form"></form>
+          <button id="saveBudget" class="primary-btn full"><i class="ri-save-3-line"></i> 保存预算</button>
+        </div>
+        <div class="hint small">
+          提示：预算用于首页进度条及超支提醒，仅针对当前月份生效。
+        </div>
+      </section>
+    </main>
+
+    <!-- 底部导航 -->
+    <nav class="tabbar">
+      <button class="tab-btn active" data-nav="home"><i class="ri-home-5-line"></i><span>首页</span></button>
+      <button class="tab-btn" data-nav="record"><i class="ri-add-box-line"></i><span>记录</span></button>
+      <button class="tab-btn" data-nav="stats"><i class="ri-bar-chart-2-line"></i><span>统计</span></button>
+      <button class="tab-btn" data-nav="settings"><i class="ri-settings-3-line"></i><span>设置</span></button>
+    </nav>
+  </div>
+
+  <!-- Script -->
+  <script src="./app.js"></script>
+</body>
+</html>
